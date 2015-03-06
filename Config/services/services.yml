@@ -174,10 +174,6 @@ services:
         class: BackBee\Event\Listener\DoctrineListener
         arguments: [@bbapp]
 
-    exception.listener:
-        class: BackBee\Event\Listener\ExceptionListener
-        arguments: [@bbapp]
-
     controller_resolver:
         class:      %bbapp.controller_resolver.class%
         arguments:  [@bbapp]

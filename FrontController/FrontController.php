@@ -30,7 +30,6 @@ use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseEvent;
 use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
 use Symfony\Component\HttpKernel\Event\PostResponseEvent;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -204,7 +203,7 @@ class FrontController implements HttpKernelInterface
                 $matches = $urlMatcher->match($this->getRequest()->getPathInfo());
 
                 if (!isset($matches['_controller'])) {
-                    // set default controller to this
+                    // set default cotnroller to this
                     $matches['_controller'] = $this;
                 }
 
@@ -451,6 +450,21 @@ class FrontController implements HttpKernelInterface
             return;
         }
 
+        // if (null !== $this->getApplication()->getBBUserToken()) {
+        //     // Launch NestedNode jobs
+        //     $container = $this->getApplication()->getContainer();
+        //     if (true === ($container->hasParameter('bbapp.script.command') && $container->hasParameter('bbapp.console.command'))) {
+        //         $this->getApplication()->debug('Launching NestedNode jobs: '.sprintf('%s %s nestednode:jobs:process &', $container->getParameter('bbapp.script.command'), $container->getParameter('bbapp.console.command')));
+        //         $env = $this->getApplication()->getEnvironment();
+        //         if (true === empty($env)) {
+        //             $env = 'dev';
+        //         }
+        //         exec(sprintf('%s %s nestednode:jobs:process --env=%s &', $container->getParameter('bbapp.script.command'), $this->getApplication()->getBaseDir(). '/' . $container->getParameter('bbapp.console.command'), $env));
+        //     }
+        // }
+
+        // force content output
+//        @ini_set('zlib.output_compression', 0); // 2014-06-23: comment by c.rouillon
         ob_implicit_flush(true);
         flush();
 
@@ -582,13 +596,55 @@ class FrontController implements HttpKernelInterface
      * @param integer    $type    The type of the request
      *
      * @return Response A Response instance
+     *
+     * @throws \Exception
      */
-    private function handleException(\Exception $exception, Request $request, $type)
+    private function handleException(\Exception $e, $request, $type)
     {
-        $event = new GetResponseForExceptionEvent($this, $request, $type, $exception);
+        $event = new GetResponseForExceptionEvent($this, $request, $type, $e);
         $this->application->getEventDispatcher()->dispatch(KernelEvents::EXCEPTION, $event);
 
-        return $event->getResponse();
+        // a listener might have replaced the exception
+        $e = $event->getException();
+
+        try {
+            if (!$event->hasResponse()) {
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            $response = new Response();
+
+            if ($e instanceof AccessDeniedException) {
+                $response->setStatusCode(403);
+                $response->setContent($e->getMessage());
+            } elseif ($e instanceof \InvalidArgumentException) {
+                $response->setStatusCode(500);
+                $response->setContent($e->getMessage());
+            } else {
+                throw $e;
+            }
+
+            return $response;
+        }
+
+        $response = $event->getResponse();
+
+        if (!$response->isClientError() && !$response->isServerError() && !$response->isRedirect()) {
+            // ensure that we actually have an error response
+            if ($e instanceof HttpExceptionInterface) {
+                // keep the HTTP status code and headers
+                $response->setStatusCode($e->getStatusCode());
+                $response->headers->add($e->getHeaders());
+            } elseif ($e instanceof FrontControllerException) {
+                // keep the HTTP status code
+                $response->setStatusCode($e->getStatusCode());
+            } else {
+                $response->setStatusCode(500);
+                $response->setContent($e->getMessage());
+            }
+        }
+
+        return $response;
     }
 
     /**
