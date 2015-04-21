@@ -1576,6 +1576,8 @@ class Page extends AbstractNestedNode implements RenderableInterface, DomainObje
             $content->setMainNode($this);
         }
 
+        $content->setState(AbstractClassContent::STATE_NORMAL);
+
         return $content;
     }
 
