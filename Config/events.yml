@@ -90,6 +90,7 @@ kernel.exception:
 
 kernel.controller:
     listeners:
+        - [@rest.listener.event_dispatcher, onKernelController]
         - [@rest.listener.param_converter, onKernelController]
         - [@rest.listener.security, onKernelController]
         - [@rest.listener.validation, onKernelController]
@@ -97,6 +98,7 @@ kernel.controller:
 
 kernel.response:
     listeners:
+        - [@rest.listener.event_dispatcher, onKernelResponse]
         - [@profiler.toolbar.listener, onKernelResponse]
         - [@profiler.listener, onKernelResponse]
 

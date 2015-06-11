@@ -72,6 +72,11 @@ services:
         calls:
             - [setMetadataFactory, [@rest.metadata.factory]]
 
+    rest.listener.event_dispatcher:
+        class: BackBee\Rest\EventListener\EventDispatcherListener
+        calls:
+            - [setEventDispatcher, [@event.dispatcher]]
+
     rest.metadata.annotation_reader:
         class: Doctrine\Common\Annotations\AnnotationReader
 

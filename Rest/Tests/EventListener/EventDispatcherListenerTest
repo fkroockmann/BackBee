@@ -1,0 +1,186 @@
+<?php
+
+/*
+ * Copyright (c) 2011-2015 Lp digital system
+ *
+ * This file is part of BackBee.
+ *
+ * BackBee is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * BackBee is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with BackBee. If not, see <http://www.gnu.org/licenses/>.
+ *
+ * @author Charles Rouillon <charles.rouillon@lp-digital.fr>
+ */
+
+namespace BackBee\Rest\Tests\EventListener;
+
+use BackBee\Controller\FrontController;
+
+use BackBee\Rest\EventListener\EventDispatcherListener;
+use BackBee\Rest\Tests\Fixtures\Controller\MockAbstractRestImplController;
+use BackBee\Rest\Tests\Fixtures\Controller\FixtureAnnotatedController;
+use BackBee\Rest\Tests\Fixtures\Listener\BasicListener;
+
+use BackBee\Tests\TestCase;
+
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
+
+/**
+ * Test for EventDispatchListener class.
+ *
+ * @category    BackBee
+ *
+ * @author      f.kroockmann <florian.kroockmann@lp-digital.fr>
+ *
+ * @coversDefaultClass \BackBee\Rest\EventListener\EventDispatcherListener
+ * @group Rest
+ */
+class EventDispatchListenerTest extends TestCase
+{
+    const REQUEST_EVENT_NAME = 'rest.mockabstractrestimpl.create404response.request';
+    const RESPONSE_EVENT_NAME = 'rest.mockabstractrestimpl.create404response.response';
+
+    /**
+     * @expectedException InvalidArgumentException
+     */
+    public function testThrowExceptionIfEventDispatcherDoesntExist()
+    {
+        $listener = new EventDispatcherListener();
+
+        $listener->onKernelController($this->getFilterControllerEvent());
+    }
+
+    public function testSetEventDispatcher()
+    {
+        $listener = new EventDispatcherListener();
+        $listener->setEventDispatcher($this->getBBApp()->getEventDispatcher());
+
+        $listener->onKernelController($this->getFilterControllerEvent());
+    }
+
+    public function testOnKernelController()
+    {
+        $eventDispatcher = $this->getBBApp()->getEventDispatcher();
+
+        $listener = new EventDispatcherListener();
+        $listener->setEventDispatcher($eventDispatcher);
+
+        $basicListener = new BasicListener();
+        $eventDispatcher->addListener($this::REQUEST_EVENT_NAME, array($basicListener, 'onListen'));
+
+        $this->assertFalse($basicListener->isListened());
+
+        $listener->onKernelController($this->getFilterControllerEvent());
+
+        $this->assertTrue($basicListener->isListened());
+    }
+
+    public function testOnKernelControllerWithNotRestController()
+    {
+        $eventDispatcher = $this->getBBApp()->getEventDispatcher();
+
+        $listener = new EventDispatcherListener();
+        $listener->setEventDispatcher($eventDispatcher);
+
+        $basicListener = new BasicListener();
+        $eventDispatcher->addListener($this::REQUEST_EVENT_NAME, array($basicListener, 'onListen'));
+
+        $this->assertFalse($basicListener->isListened());
+
+        $mockController = new FixtureAnnotatedController();
+        $action = 'defaultPaginationAction';
+
+        $controller = [$mockController, $action];
+        $event = new FilterControllerEvent(new FrontController(),
+                                           $controller,
+                                           $this->getRequest(get_class($mockController), $action),
+                                           FrontController::MASTER_REQUEST);
+
+        $listener->onKernelController($event);
+
+        $this->assertFalse($basicListener->isListened());
+    }
+
+    public function testOnKernelResponse()
+    {
+        $eventDispatcher = $this->getBBApp()->getEventDispatcher();
+
+        $listener = new EventDispatcherListener();
+        $listener->setEventDispatcher($eventDispatcher);
+
+        $basicListener = new BasicListener();
+        $eventDispatcher->addListener($this::RESPONSE_EVENT_NAME, array($basicListener, 'onListen'));
+
+        $this->assertFalse($basicListener->isListened());
+
+        $request = $this->getRequest(get_class(new MockAbstractRestImplController()), 'create404ResponseAction');
+        $event = new FilterResponseEvent(new FrontController(),
+                                         $request,
+                                         FrontController::MASTER_REQUEST,
+                                         $this->getResponse());
+
+        $listener->onKernelResponse($event);
+
+        $this->assertTrue($basicListener->isListened());
+    }
+
+    public function testOnKernelResponseWithNotRestController()
+    {
+        $eventDispatcher = $this->getBBApp()->getEventDispatcher();
+
+        $listener = new EventDispatcherListener();
+        $listener->setEventDispatcher($eventDispatcher);
+
+        $basicListener = new BasicListener();
+        $eventDispatcher->addListener($this::RESPONSE_EVENT_NAME, array($basicListener, 'onListen'));
+
+        $this->assertFalse($basicListener->isListened());
+
+        $request = $this->getRequest(get_class(new FixtureAnnotatedController()), 'defaultPaginationAction');
+        $event = new FilterResponseEvent(new FrontController(),
+                                         $request,
+                                         FrontController::MASTER_REQUEST,
+                                         $this->getResponse());
+
+        $listener->onKernelResponse($event);
+
+        $this->assertFalse($basicListener->isListened());
+    }
+
+    private function getFilterControllerEvent()
+    {
+        $mockController = new MockAbstractRestImplController();
+        $action = 'create404ResponseAction';
+
+        $controller = [$mockController, $action];
+        $request = $this->getRequest(get_class($mockController), $action);
+
+        return new FilterControllerEvent(new FrontController(), $controller, $request, FrontController::MASTER_REQUEST);
+    }
+
+    private function getRequest($controller, $action)
+    {
+        $request = Request::create('test', "POST", [], [], [], ['CONTENT_TYPE' => 'application/json']);
+        $request->attributes->set('_controller', $controller);
+        $request->attributes->set('_action', $action);
+
+        return $request;
+    }
+
+    private function getResponse()
+    {
+        return Response::create('content', 200);
+    }
+}
