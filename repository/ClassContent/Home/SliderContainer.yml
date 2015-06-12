@@ -1,8 +1,0 @@
-SliderContainer:
-  extends: \BackBee\ClassContent\ContentSet
-  properties:
-    name: "Slider container"
-    description: "Slider slides container"
-    category: [!Home]
-  parameters:
-    accept: BackBee\ClassContent\Home\Slide
