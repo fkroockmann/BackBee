@@ -1,47 +1,64 @@
-{% set slide_id = 'slide' ~ random() %}
-{% if (0 < slides|length or bb.token != null) %}
 <div {{ this.bbcontent(null, {class: 'row'})|raw }}>
-  <div class="col-sm-12">
-    <div id="{{ slide_id }}" class="owl-carousel slider-wrapper slider-fw{% if (bb.token == null) %} slider-loader{% endif %}">
-      {{ this.render(slides)|raw }}
+    <div class="col-sm-12">
+        {% set slide_id = 'slider_' ~ random() %}
+        <div id="{{ slide_id }}" class="owl-carousel slider-wrapper slider-fw slider_loader">
+            <div class="slider-list slider-has-pagination">
+                {% for slide in slides %}
+                    <div class="slider-item">
+                        <figure class="figure">
+                            {{ this.render(slide.media, 'slider')|raw }}
+                            {% if slide.link is defined and slide.link.url is not empty and slide.link.title is not empty%}
+                                <figcaption class="figcaption">
+                                    <div class="container">
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <h2 class="ttl">
+                                                    <a href="{{ slide.link.url }}" target="{{ slide.link.target }}">{{ slide.link.title|raw }}</a>
+                                                </h2>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </figcaption>
+                            {% endif %}
+                        </figure>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
-  </div>
+    <script type="text/javascript">
+
+        var initSlider = function () {
+            var slider = $('#{{ slide_id }} .slider-list'),
+                items = slider.parent('.slider-wrapper').find('.owl-item');
+                slider.owlCarousel({
+                    pagination: true,
+                    singleItem: true,
+                    navigation: true,
+                    autoPlay: 6000,
+                    lazyLoad: true,
+                    navigationText: [
+                        '<i class="fa fa-angle-left"></i>',
+                        '<i class="fa fa-angle-right"></i>'
+                    ],
+                    afterInit: function () {
+                        slider.parent('.slider-wrapper').removeClass('slider-loader');
+                        done = true;
+                    },
+                    beforeMove: function () {
+                        items.eq(this.owl.currentItem)
+                                .find('.figcaption .ttl')
+                                .removeClass('animated fadeIn');
+                    },
+                    afterMove: function () {
+                        items.eq(this.owl.currentItem)
+                                .find('.figcaption .ttl')
+                                .addClass('animated fadeIn');
+                    }
+                });
+        };
+
+        document.addEventListener('DOMContentLoaded', initSlider);
+    </script>
 </div>
-{% endif %}
 
-<script type="text/javascript">
-{% if (bb.token == null) %}
-var initSlider = function () {
-    var slider = $('#{{ slide_id }} .slider-list'),
-        items = slider.parent('.slider-wrapper').find('.owl-item');
-
-    slider.owlCarousel({
-      pagination: true,
-      singleItem: true,
-      navigation: true,
-      autoPlay: 6000,
-      autoHeight: true,
-      lazyLoad: true,
-      navigationText: [
-        '<i class="fa fa-angle-left"></i>',
-        '<i class="fa fa-angle-right"></i>'
-      ],
-      afterInit: function(){
-        slider.parent('.slider-wrapper').removeClass('slider-loader');
-      },
-      beforeMove: function(){
-        items.eq(this.owl.currentItem)
-             .find('.figcaption .ttl')
-             .removeClass('animated fadeIn');
-      },
-      afterMove: function(){
-        items.eq(this.owl.currentItem)
-             .find('.figcaption .ttl')
-             .addClass('animated fadeIn');
-      }
-    });
-  };
-
-document.addEventListener('DOMContentLoaded', initSlider);
-{% endif %}
-</script>

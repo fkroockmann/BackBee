@@ -17,3 +17,7 @@ article.article.render:
 article.quote.render:
   listeners:
     - [BackBee\Event\Listener\QuoteListener, onRender]
+    
+home.slider.render:
+    listeners:
+        - [BackBee\Event\Listener\SliderListener, onRender]
