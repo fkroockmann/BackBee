@@ -25,6 +25,7 @@ namespace BackBee\Rest\Controller;
 
 use BackBee\ClassContent\AbstractClassContent;
 use BackBee\ClassContent\Exception\InvalidContentTypeException;
+use BackBee\NestedNode\Page;
 use BackBee\Rest\Controller\Annotations as Rest;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Symfony\Component\HttpFoundation\Request;
@@ -156,13 +157,13 @@ class ClassContentController extends AbstractRestController
      *
      * @Rest\Security("is_fully_authenticated() & has_role('ROLE_API_USER')")
      */
-    public function getAction($type, $uid, Request $request)
+    public function getAction($type, $uid, Request $request, Page $page = null)
     {
         $this->granted('VIEW', $content = $this->getClassContentByTypeAndUid($type, $uid, true));
 
         $response = null;
         if (in_array('text/html', $request->getAcceptableContentTypes())) {
-            if (null !== $page = $this->getEntityFromAttributes('page')) {
+            if (null !== $page) {
                 $this->getApplication()->getRenderer()->setCurrentPage($page);
             }
 
