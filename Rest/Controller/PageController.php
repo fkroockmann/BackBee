@@ -735,7 +735,10 @@ class PageController extends AbstractRestController
         if (null === $parent && !$request->query->has('site_uid')) {
             $qb->andSiteIs($this->getApplication()->getSite());
         } elseif ($request->query->has('site_uid')) {
-            $qb->andSiteIs($request->query->get('site_uid'));
+            $site = $this->getEntityManager()->find('BackBee\Site\Site', $request->query->get('site_uid'));
+            if (null !== $site) {
+                $qb->andSiteIs($site);
+            }
         }
 
         if ($request->query->has('root')) {
